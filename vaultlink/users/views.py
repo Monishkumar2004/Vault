@@ -1,15 +1,33 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .models import CustomUser
 from django.db import IntegrityError
 
 # Create your views here.
 
+# Anonymous required
+def anonymous_required(function = None, redirect_url = None):
+
+    if not redirect_url:
+        redirect_url = 'ops_user_path'
+    
+    actual_decorator = user_passes_test(
+        lambda u: u.is_anonymous,
+        login_url=redirect_url
+    )
+
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+@anonymous_required
 def login_view(request):
     return render(request, 'login.html')
 
+
+@anonymous_required
 def doLogin_view(request):
 
     if request.method == "POST":
@@ -38,11 +56,11 @@ def doLogin_view(request):
             messages.error(request, "Email or Password Invalid")
             return redirect('login_path')
             
-
+@anonymous_required
 def register_client_view(request):
     return render(request, 'register_user.html')
 
-
+@anonymous_required
 def register(request):
 
     if request.method == 'POST':
@@ -79,7 +97,3 @@ def Logout_view(request):
     return redirect('login_view')
 
 
-@login_required
-def ops_user_view(request):
-
-    return render(request, 'ops_user_page.html')

@@ -1,1 +1,77 @@
-<h1>This is ops_user_page</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Ops User - Upload Files</title>
+</head>
+<body>
+    <h1>Upload Files (pptx, docx, xlsx only)</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="files" multiple accept=".pptx,.docx,.xlsx" />
+        <button type="submit">Upload</button>
+    </form>
+
+    <div id="responseMessage"></div>
+
+    <script>
+        // Utility to get CSRF token from cookies (default Django setup)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const form = document.getElementById('uploadForm');
+        const responseMessage = document.getElementById('responseMessage');
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const files = document.getElementById('fileInput').files;
+            if (!files.length) {
+                responseMessage.innerText = 'Please select at least one file.';
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            const csrftoken = getCookie('csrftoken');
+
+            try {
+                const response = await fetch('/api/file-upload/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData,
+                    credentials: 'include' // Important to include cookies for CSRF validation
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseMessage.innerText = data.message || 'Upload successful!';
+                } else {
+                    responseMessage.innerText = data.message || 'Upload failed.';
+                }
+
+            } catch (error) {
+                responseMessage.innerText = 'An error occurred: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
