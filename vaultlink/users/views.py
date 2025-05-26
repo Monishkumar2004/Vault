@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .models import CustomUser
 from django.db import IntegrityError
+from django.core.exceptions import PermissionDenied
 
 # Create your views here.
 
@@ -48,7 +49,7 @@ def doLogin_view(request):
             if user_type == 1:
                 return render(request, 'ops_user_page.html')
             elif user_type == 2:
-                return render(request, "client_page.html")
+                return redirect('client_path')
             else:
                 messages.error(request, "Email or Password Invalid")
                 return redirect('login_path')
@@ -95,5 +96,13 @@ def Logout_view(request):
     logout(request)
 
     return redirect('login_path')
+
+# New view for client page
+@login_required
+def client_view(request):
+    # Ensure the logged-in user is a client
+    if request.user.user_type != 2:
+        raise PermissionDenied("You do not have permission to access this page.")
+    return render(request, 'client_page.html')
 
 
