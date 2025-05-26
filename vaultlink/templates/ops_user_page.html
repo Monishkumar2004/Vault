@@ -9,7 +9,12 @@
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">Upload Files</h1>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Upload Files</h1>
+                <button id="logoutButton" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
+                    Logout
+                </button>
+            </div>
             <p class="text-gray-600 mb-4">Supported formats: PPTX, DOCX, XLSX, PDF</p>
 
             <form id="uploadForm" enctype="multipart/form-data" class="space-y-4">
@@ -58,6 +63,7 @@
         const fileInput = document.getElementById('fileInput');
         const selectedFiles = document.getElementById('selectedFiles');
         const responseMessage = document.getElementById('responseMessage');
+        const logoutButton = document.getElementById('logoutButton');
         let filesToUpload = []; // Array to hold all selected files
 
         // Handle drag and drop
@@ -195,6 +201,32 @@
                 responseMessage.innerHTML = `<div class="text-red-500">An error occurred: ${error.message}</div>`;
             }
         });
+
+        // Handle logout button click
+        logoutButton.addEventListener('click', async function() {
+            const csrftoken = getCookie('csrftoken');
+            try {
+                const response = await fetch('/Logout', { // Corrected URL
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    // Redirect to login page after successful logout
+                    window.location.href = '/'; // This is still correct as / maps to login_path
+                } else {
+                    // Handle logout error (optional)
+                    console.error('Logout failed:', response.statusText);
+                }
+            } catch (error) {
+                console.error('An error occurred during logout:', error);
+            }
+        });
+
     </script>
 </body>
 </html>

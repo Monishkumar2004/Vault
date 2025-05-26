@@ -94,6 +94,6 @@ def register(request):
 def Logout_view(request):
     logout(request)
 
-    return redirect('login_view')
+    return redirect('login_path')
 
 
