@@ -16,7 +16,8 @@ class FileListSerializer(serializers.Serializer):
     )
 
     def validate_files(self, files):
-        allowed_extensions = ['pptx', 'docx', 'xlsx']
+        allowed_extensions = ['pptx', 'docx', 'xlsx', 'pdf']
+        # allowed_extensions = ['pptx', 'docx', 'xlsx']
         for file in files:
             ext = file.name.split('.')[-1].lower()
             if ext not in allowed_extensions:
@@ -43,7 +44,7 @@ class FileListSerializer(serializers.Serializer):
         self.zip_files(folder.uid)
 
         return {
-            'files': {},
+            'files': [{'id': f.id, 'file': f.file.name} for f in files_objs],
             'folder': str(folder.uid),
             'message': 'Files uploaded and zipped successfully'
-                 }
+        }

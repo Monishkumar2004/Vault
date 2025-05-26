@@ -5,10 +5,10 @@
     <title>Ops User - Upload Files</title>
 </head>
 <body>
-    <h1>Upload Files (pptx, docx, xlsx only)</h1>
+    <h1>Upload Files (pptx, docx, xlsx, pdf only)</h1>
 
     <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileInput" name="files" multiple accept=".pptx,.docx,.xlsx" />
+        <input type="file" id="fileInput" name="files" multiple accept=".pptx,.docx,.xlsx,.pdf" />
         <button type="submit">Upload</button>
     </form>
 
@@ -63,9 +63,30 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    responseMessage.innerText = data.message || 'Upload successful!';
+                    let message = data.message || 'Upload successful!';
+                    if (data.data && data.data.files && data.data.files.length > 0) {
+                        message += '\nUploaded files:';
+                        data.data.files.forEach(file => {
+                            message += '\n- ' + file.file;
+                        });
+                    }
+                    responseMessage.innerText = message;
                 } else {
-                    responseMessage.innerText = data.message || 'Upload failed.';
+                    if (response.status === 403) {
+                        responseMessage.innerText = 'Access denied. Only operations users can upload files.';
+                        // Redirect to login page after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                    } else if (response.status === 401) {
+                        responseMessage.innerText = 'Please log in to upload files.';
+                        // Redirect to login page after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                    } else {
+                        responseMessage.innerText = data.message || 'Upload failed.';
+                    }
                 }
 
             } catch (error) {
