@@ -1,1 +1,110 @@
-<h1>This is client page</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard - VaultLink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">Available Files</h1>
+            
+            <div id="fileList" class="space-y-8">
+                <!-- Files will be loaded here -->
+                <div class="text-center text-gray-500">Loading files...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utility to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        // Load files when page loads
+        async function loadFiles() {
+            const fileList = document.getElementById('fileList');
+            
+            try {
+                const response = await fetch('/api/file-list/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const folders = data.data.folders;
+                    if (Object.keys(folders).length === 0) {
+                        fileList.innerHTML = '<div class="text-center text-gray-500">No files available</div>';
+                        return;
+                    }
+
+                    fileList.innerHTML = Object.entries(folders).map(([folderId, folderData]) => `
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-gray-800">Folder ${folderId}</h2>
+                                <a href="${folderData.zip_url}" download class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center space-x-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                    </svg>
+                                    <span>Download All (ZIP)</span>
+                                </a>
+                            </div>
+                            <div class="space-y-3">
+                                ${folderData.files.map(file => `
+                                    <div class="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors">
+                                        <div class="flex items-center space-x-4">
+                                            <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <div>
+                                                <h3 class="font-medium text-gray-800">${file.name}</h3>
+                                                <p class="text-sm text-gray-500">Uploaded on ${formatDate(file.created_at)}</p>
+                                            </div>
+                                        </div>
+                                        <a href="${file.url}" download class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                                            Download
+                                        </a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    fileList.innerHTML = '<div class="text-center text-red-500">Error loading files. Please try again later.</div>';
+                }
+            } catch (error) {
+                fileList.innerHTML = '<div class="text-center text-red-500">Error loading files. Please try again later.</div>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Load files when page loads
+        document.addEventListener('DOMContentLoaded', loadFiles);
+    </script>
+</body>
+</html>

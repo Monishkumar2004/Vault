@@ -11,11 +11,14 @@ class FileSerializer(serializers.Serializer):
 class FileListSerializer(serializers.Serializer):
     
     files = serializers.ListField(
-        child = serializers.FileField(max_length = 10000, allow_empty_file = False, use_url = False)
-
+        child=serializers.FileField(max_length=10000, allow_empty_file=False, use_url=False),
+        required=True,
+        allow_empty=False
     )
 
     def validate_files(self, files):
+        if not isinstance(files, list):
+            files = [files]  # Convert single file to list
         allowed_extensions = ['pptx', 'docx', 'xlsx', 'pdf']
         # allowed_extensions = ['pptx', 'docx', 'xlsx']
         for file in files:
@@ -32,7 +35,10 @@ class FileListSerializer(serializers.Serializer):
 
         folder = Folder.objects.create()
 
-        files = validated_data.pop('files')
+        files = validated_data.get('files', [])
+
+        if not isinstance(files, list):
+            files = [files]  # Convert single file to list
 
         files_objs = []
 

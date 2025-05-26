@@ -2,20 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ops User - Upload Files</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Upload Files (pptx, docx, xlsx, pdf only)</h1>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">Upload Files</h1>
+            <p class="text-gray-600 mb-4">Supported formats: PPTX, DOCX, XLSX, PDF</p>
 
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileInput" name="files" multiple accept=".pptx,.docx,.xlsx,.pdf" />
-        <button type="submit">Upload</button>
-    </form>
+            <form id="uploadForm" enctype="multipart/form-data" class="space-y-4">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                    <input type="file" id="fileInput" name="files" multiple accept=".pptx,.docx,.xlsx,.pdf" class="hidden" />
+                    <label for="fileInput" class="cursor-pointer">
+                        <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-600">Click to select files or drag and drop</p>
+                    </label>
+                </div>
 
-    <div id="responseMessage"></div>
+                <div id="selectedFiles" class="space-y-2"></div>
+
+                <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>Upload Files</span>
+                </button>
+            </form>
+
+            <div id="responseMessage" class="mt-4"></div>
+        </div>
+    </div>
 
     <script>
-        // Utility to get CSRF token from cookies (default Django setup)
+        // Utility to get CSRF token from cookies
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -32,23 +55,100 @@
         }
 
         const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+        const selectedFiles = document.getElementById('selectedFiles');
         const responseMessage = document.getElementById('responseMessage');
+        let filesToUpload = []; // Array to hold all selected files
 
+        // Handle drag and drop
+        const dropZone = document.querySelector('.border-dashed');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('border-blue-500');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('border-blue-500');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            addFiles(files);
+        }
+
+        // Add files to the list and update display
+        function addFiles(files) {
+             // Convert FileList to array and add to our filesToUpload array
+            Array.from(files).forEach(file => {
+                // Optional: check for duplicates if needed
+                // if (!filesToUpload.some(existingFile => existingFile.name === file.name && existingFile.size === file.size)) {
+                    filesToUpload.push(file);
+                // }
+            });
+            updateSelectedFilesDisplay();
+        }
+
+        // Update selected files display
+        function updateSelectedFilesDisplay() {
+            selectedFiles.innerHTML = '';
+            
+            if (filesToUpload.length > 0) {
+                selectedFiles.innerHTML = '<p class="font-medium text-gray-700 mb-2">Selected files:</p>';
+                filesToUpload.forEach((file, index) => {
+                    selectedFiles.innerHTML += `
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span class="text-sm text-gray-600">${file.name}</span>
+                            <span class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Handle file selection via input
+        fileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            addFiles(files);
+             // Do NOT clear fileInput.value here. Clearing prevents selecting the same file twice,
+             // but it also seems to interfere with some browsers' ability to register subsequent selections.
+        });
+
+        // Handle form submission
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            const files = document.getElementById('fileInput').files;
-            if (!files.length) {
-                responseMessage.innerText = 'Please select at least one file.';
+            if (filesToUpload.length === 0) {
+                responseMessage.innerHTML = '<div class="text-red-500">Please select at least one file.</div>';
                 return;
             }
 
             const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('files', files[i]);
-            }
+            filesToUpload.forEach(file => {
+                formData.append('files', file);
+            });
 
             const csrftoken = getCookie('csrftoken');
+            responseMessage.innerHTML = '<div class="text-blue-500">Uploading files...</div>';
 
             try {
                 const response = await fetch('/api/file-upload/', {
@@ -57,40 +157,42 @@
                         'X-CSRFToken': csrftoken
                     },
                     body: formData,
-                    credentials: 'include' // Important to include cookies for CSRF validation
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    let message = data.message || 'Upload successful!';
+                    let message = '<div class="text-green-500">Upload successful!</div>';
                     if (data.data && data.data.files && data.data.files.length > 0) {
-                        message += '\nUploaded files:';
+                        message += '<div class="mt-2"><p class="font-medium">Uploaded files:</p><ul class="list-disc list-inside mt-1">';
                         data.data.files.forEach(file => {
-                            message += '\n- ' + file.file;
+                            message += `<li class="text-gray-600">${file.file}</li>`;
                         });
+                        message += '</ul></div>';
                     }
-                    responseMessage.innerText = message;
+                    responseMessage.innerHTML = message;
+                    
+                    // Clear the selected files list and display
+                    filesToUpload = [];
+                    updateSelectedFilesDisplay();
                 } else {
                     if (response.status === 403) {
-                        responseMessage.innerText = 'Access denied. Only operations users can upload files.';
-                        // Redirect to login page after 2 seconds
+                        responseMessage.innerHTML = '<div class="text-red-500">Access denied. Only operations users can upload files.</div>';
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 2000);
                     } else if (response.status === 401) {
-                        responseMessage.innerText = 'Please log in to upload files.';
-                        // Redirect to login page after 2 seconds
+                        responseMessage.innerHTML = '<div class="text-red-500">Please log in to upload files.</div>';
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 2000);
                     } else {
-                        responseMessage.innerText = data.message || 'Upload failed.';
+                        responseMessage.innerHTML = `<div class="text-red-500">${data.message || 'Upload failed.'}</div>`;
                     }
                 }
-
             } catch (error) {
-                responseMessage.innerText = 'An error occurred: ' + error.message;
+                responseMessage.innerHTML = `<div class="text-red-500">An error occurred: ${error.message}</div>`;
             }
         });
     </script>

@@ -61,3 +61,46 @@ class FileUpload(APIView):
                 'message': 'Internal server error',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class FileList(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Check if user is client
+        if request.user.user_type != 2:  # 2 represents client
+            raise PermissionDenied("Only clients can view files.")
+            
+        try:
+            # Get all files from all folders
+            files = Files.objects.all().order_by('-created_at')
+            file_list = []
+            folders = {}  # To group files by folder
+            
+            for file in files:
+                folder_uid = str(file.folder.uid)
+                if folder_uid not in folders:
+                    folders[folder_uid] = {
+                        'files': [],
+                        'zip_url': f'/media/zip/{folder_uid}.zip'
+                    }
+                
+                folders[folder_uid]['files'].append({
+                    'id': file.id,
+                    'name': file.file.name.split('/')[-1],  # Get just the filename
+                    'url': file.file.url,
+                    'created_at': file.created_at
+                })
+                
+            return Response({
+                'status': 200,
+                'data': {
+                    'folders': folders
+                }
+            })
+            
+        except Exception as e:
+            return Response({
+                'status': 500,
+                'message': 'Internal server error',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
