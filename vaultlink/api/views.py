@@ -18,7 +18,7 @@ def ops_user_view(request):
     return render(request, 'ops_user_page.html')
 
 
-# @method_decorator(csrf_exempt, name='dispatch')
+
 class FileUpload(APIView):
     permission_classes = [IsAuthenticated]
 
